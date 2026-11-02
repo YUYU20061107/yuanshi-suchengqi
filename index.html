@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>院士速成器 · Academician Speedrun</title>
+<style>
+  :root{
+    --ink:#1c1e24; --ink-2:#4a4f59; --ink-3:#7a808c;
+    --paper:#f6f3ec; --panel:#efece3; --card:#fbf9f4; --line:#ddd6c6;
+    --accent:#002fa7; --accent-soft:#e3e9f8;
+    --khaki:#b7a888; --ok:#2e7d4f; --warn:#b3541e; --bad:#b3261e;
+    --num:"SF Mono","Cascadia Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif; background:var(--paper); color:var(--ink); font-size:14px; display:flex; flex-direction:column; overflow:hidden;}
+  .num{font-family:var(--num); font-variant-numeric:tabular-nums;}
+  button{font:inherit; cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:6px; padding:4px 12px;}
+  button:hover{border-color:var(--khaki);}
+  button.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  button.primary:hover{background:#00247e;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  button.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent);}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  header{display:flex; align-items:center; gap:16px; padding:12px 16px; background:var(--panel); border-bottom:1px solid var(--line); flex:none; flex-wrap:wrap;}
+  .brand{font-weight:700; font-size:16px; white-space:nowrap;}
+  .brand small{display:block; font-weight:400; font-size:11px; color:var(--ink-3);}
+  .topicbar{display:flex; gap:8px; flex:1; max-width:720px; min-width:280px;}
+  .topicbar input{flex:1; padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card); font:inherit;}
+  .srcs{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .srcs span{font-size:12px; color:var(--ink-2);}
+  .chip{padding:4px 8px; font-size:12px; border-radius:999px;}
+  .chip.dead{opacity:.55; text-decoration:line-through;}
+  .demo-tag{font-size:11px; color:var(--warn); border:1px solid var(--warn); border-radius:4px; padding:2px 8px; white-space:nowrap;}
+  .demo-tag.live{color:var(--ok); border-color:var(--ok);}
+
+  main{flex:1; display:grid; grid-template-columns:400px 1fr 400px; gap:8px; padding:8px; min-height:0;}
+  section.panel{background:var(--panel); border-radius:8px; display:flex; flex-direction:column; min-height:0; overflow:hidden;}
+  .p-head{display:flex; align-items:center; justify-content:space-between; padding:8px 12px; flex:none;}
+  .p-head h2{font-size:13px; font-weight:700; letter-spacing:.04em;}
+  .p-head .tools{display:flex; gap:8px;}
+  .p-head button{padding:2px 8px; font-size:12px;}
+  .p-body{flex:1; overflow-y:auto; padding:0 12px 12px; display:flex; flex-direction:column; gap:16px;}
+
+  .coltabs{display:flex; gap:8px; padding:0 12px 8px; flex:none;}
+  .coltabs button{flex:1;}
+  .split-label{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-2); margin-bottom:8px;}
+  .split-label b{color:var(--ink);}
+  .mine-zone{border-bottom:1px dashed var(--khaki); padding-bottom:12px; margin-bottom:4px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:8px;}
+  .card h3{font-size:13px; line-height:1.45; margin-bottom:4px;}
+  .card h3 a{color:var(--ink); text-decoration:none;}
+  .card h3 a:hover{color:var(--accent); text-decoration:underline;}
+  .meta{font-size:12px; color:var(--ink-2); display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px;}
+  .claim{font-size:12px; line-height:1.55; margin-bottom:4px;}
+  .claim .lab{color:var(--ink-3); margin-right:4px;}
+  .verify{font-size:12px; line-height:1.55;}
+  .verify .lab{color:var(--ink-3); margin-right:4px;}
+  .verify .st-ok{color:var(--ok);} .verify .st-none{color:var(--ink-3);} .verify .st-dispute{color:var(--warn);}
+  .card .ops{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+  .card .ops button{font-size:12px; padding:2px 8px;}
+  .card.flagged{border-color:var(--bad); background:#fdf1f0;}
+  .flag-note{font-size:12px; color:var(--bad); margin-top:4px; line-height:1.5;}
+  .trend{color:var(--ok); font-size:11px;}
+  .empty{font-size:12px; color:var(--ink-3); padding:8px 0;}
+  .badge{display:inline-block; font-size:11px; border-radius:4px; padding:0 6px; margin-left:6px; vertical-align:1px;}
+  .badge.ok{background:#dcefe2; color:var(--ok);}
+  .badge.warn{background:#f3e2c7; color:var(--warn);}
+  .badge.bad{background:#f8d7d4; color:var(--bad);}
+  .badge.none{background:#eceae2; color:var(--ink-2);}
+
+  .route{border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:8px; background:var(--card); padding:12px; margin-bottom:8px; cursor:pointer;}
+  .route:hover{border-color:var(--khaki); border-left-color:var(--accent);}
+  .route .r-tag{display:inline-block; font-size:11px; color:var(--accent); background:var(--accent-soft); border-radius:4px; padding:1px 6px; margin-bottom:4px;}
+  .route h3{font-size:14px; margin-bottom:4px;}
+  .route p{font-size:12px; color:var(--ink-2); line-height:1.55; margin-bottom:8px;}
+  .route .anchors{font-size:12px; color:var(--ink-2); line-height:1.6;}
+  .route .anchors b{color:var(--ink);}
+  .chatlog{display:flex; flex-direction:column; gap:8px;}
+  .msg{font-size:13px; line-height:1.6; padding:8px 12px; border-radius:8px; background:var(--card); border:1px solid var(--line); white-space:pre-wrap;}
+  .msg.sys{background:var(--accent-soft); border-color:transparent;}
+  .chatbar{display:flex; gap:8px; flex:none; padding:8px 12px 12px;}
+  .chatbar input{flex:1; padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card); font:inherit;}
+
+  .kpis{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px;}
+  .kpi .v{font-size:20px; font-weight:700;}
+  .kpi .k{font-size:12px; color:var(--ink-2); margin-top:2px;}
+  .chart-ctl{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
+  .chart-ctl button{font-size:12px; padding:2px 8px;}
+  .para{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; font-size:13px; line-height:1.65;}
+  .para h3{font-size:13px; margin-bottom:8px;}
+  .para .lab{color:var(--ink-3); font-size:12px;}
+
+  footer{flex:none; display:flex; align-items:center; gap:8px; padding:8px 16px; background:var(--panel); border-top:1px solid var(--line); font-size:12px; overflow-x:auto;}
+  .step{display:flex; align-items:center; gap:8px; white-space:nowrap; color:var(--ink-3);}
+  .step.done{color:var(--ok);} .step.now{color:var(--accent); font-weight:700;}
+  .step .dot{width:8px; height:8px; border-radius:50%; background:currentColor; flex:none;}
+  .arrow{color:var(--khaki);}
+  .footprint{margin-left:auto; color:var(--ink-3); white-space:nowrap;}
+
+  .overlay{position:fixed; inset:0; background:rgba(28,30,36,.45); display:none; align-items:center; justify-content:center; z-index:50;}
+  .overlay.open{display:flex;}
+  .sheet{background:var(--paper); width:min(1080px,94vw); max-height:92vh; overflow-y:auto; border-radius:12px; padding:24px;}
+  .sheet header{background:none; border:none; padding:0 0 16px; flex-wrap:nowrap;}
+  .sheet h2{font-size:18px;}
+  .sheet .sub{font-size:13px; color:var(--ink-2); margin-top:4px; line-height:1.6;}
+  .flow{display:flex; flex-direction:column; gap:0; margin:16px 0;}
+  .node{display:flex; gap:12px; align-items:flex-start;}
+  .node .rail{display:flex; flex-direction:column; align-items:center;}
+  .node .n-dot{width:14px; height:14px; border-radius:50%; flex:none; margin-top:4px;}
+  .node .n-line{width:2px; flex:1; background:var(--line); min-height:24px;}
+  .node:last-child .n-line{display:none;}
+  .node .n-body{flex:1; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:16px;}
+  .node h3{font-size:14px; margin-bottom:4px;}
+  .node p{font-size:13px; color:var(--ink-2); line-height:1.6;}
+  .st{font-size:11px; border-radius:4px; padding:1px 6px; margin-left:8px;}
+  .st-hyp{background:#f3e2c7; color:var(--warn);} .st-lit{background:#dcefe2; color:var(--ok);} .st-todo{background:#eceae2; color:var(--ink-2);}
+  .actions-list{font-size:13px; line-height:1.9; padding-left:20px;}
+  .focus-extra{display:none; margin-bottom:16px;}
+  .overlay.focus-sheet .focus-extra{display:block;}
+
+  .vfy-input{width:100%; min-height:150px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--card); font:inherit; font-size:13px; line-height:1.6; resize:vertical;}
+  .vfy-row{display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; align-items:center;}
+  .vfy-sum{font-size:13px; line-height:1.7;}
+  .vfy-item{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px; font-size:12.5px; line-height:1.6;}
+  .vfy-item.bad{border-color:var(--bad); background:#fdf1f0;}
+  .vfy-item.warn{border-color:var(--warn);}
+  .vfy-item .src{color:var(--ink-3); word-break:break-all;}
+  .vfy-item .canon{color:var(--ink-2);}
+  .vfy-item a{color:var(--accent);}
+  .mind-wrap{overflow:auto; border:1px solid var(--line); border-radius:8px; background:var(--card); padding:8px;}
+  @media (max-width:1100px){ main{grid-template-columns:1fr; overflow-y:auto;} body{overflow:auto;} section.panel{min-height:420px;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">院士速成器<small>Academician Speedrun · 引用可核验的科研工作台</small></div>
+  <div class="topicbar">
+    <input id="topicInput" type="text" value="城市树木点云单木实例分割" aria-label="科研主题">
+    <button class="primary" id="searchBtn">检索并生成路线</button>
+  </div>
+  <div class="srcs" role="group" aria-label="数据源开关">
+    <span>数据源</span>
+    <button class="chip on" data-src="openalex">OpenAlex</button>
+    <button class="chip on" data-src="s2">Semantic Scholar</button>
+    <button class="chip on" data-src="arxiv">arXiv</button>
+    <button class="chip on" data-src="github">GitHub</button>
+    <button class="chip" data-src="web" title="网页检索需后端服务，单文件版未接入">网页</button>
+  </div>
+  <button id="verifyOpenBtn" class="primary">引用核验台</button>
+  <span class="demo-tag" id="modeTag">演示数据 · 点「检索」接真实 API</span>
+</header>
+
+<main>
+  <section class="panel" id="panel-res">
+    <div class="p-head"><h2>资源 · 论文与 GitHub</h2><div class="tools"><button id="verifyListBtn">核验本列 DOI</button><button data-focus="res">聚焦 ⤢</button></div></div>
+    <div class="coltabs">
+      <button id="tabPapers" class="on">论文列</button>
+      <button id="tabRepos">GitHub 列</button>
+    </div>
+    <div class="p-body">
+      <div>
+        <div class="split-label"><span><b>我的</b> · 工作集（30%）</span><span id="mineCount" class="num"></span></div>
+        <div class="mine-zone" id="mineZone"><div class="empty">还没有收藏。点下方卡片的「收藏」或「置顶」，会进入这里。</div></div>
+      </div>
+      <div>
+        <div class="split-label"><span><b>推荐</b> · 候选池（70%）</span><span id="poolHint">按相关性与引用排序</span></div>
+        <div id="poolZone"></div>
+      </div>
+      <div class="focus-extra">
+        <div class="split-label"><b>聚焦工具</b><span>高级筛选 · 引用图谱 · 阅读队列（原型占位）</span></div>
+        <div class="card"><h3>引用图谱（示意）</h3><p class="claim">SegmentAnyTree ← 被引 — ForAINet、TreeLearn；→ 引用 — PointGroup、SoftGroup。聚焦态将渲染为可点开的图谱画布。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-chat">
+    <div class="p-head"><h2>对话 · 研究路线</h2><div class="tools"><button id="mindOpenBtn">思维导图</button><button data-focus="chat">聚焦 ⤢</button></div></div>
+    <div class="p-body">
+      <div class="chatlog" id="chatLog">
+        <div class="msg sys">已按「证据先行」完成检索与聚类：先有文献，再归纳路线。每条路线都挂了锚点论文与当前最佳指标，点开任意一条可进入流程图推演。当前展示的是随附演示集（点云单木分割课题）；在上方输入任意主题点「检索」，论文与仓库会换成 OpenAlex / Semantic Scholar / GitHub 的真实结果。</div>
+      </div>
+      <div id="routeZone"></div>
+      <div class="focus-extra">
+        <div class="card"><h3>路线对比（聚焦态）</h3><p class="claim">纵深：锚点 3 篇 · 最佳 F1 0.86 · 算力门槛中；跨界：锚点 3 篇 · 最佳 F1 0.81 · 数据需自备；空白位：锚点 3 篇 · 无公开基线 · 算力门槛低。</p></div>
+      </div>
+    </div>
+    <div class="chatbar">
+      <input id="chatInput" type="text" placeholder="围绕当前主题或选中论文追问，回答会带出处…" aria-label="对话输入">
+      <button id="chatSend" class="primary">发送</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-data">
+    <div class="p-head"><h2>数据 · 结论与图表</h2><div class="tools"><button data-focus="data">聚焦 ⤢</button></div></div>
+    <div class="p-body">
+      <div class="kpis">
+        <div class="kpi"><div class="v num" id="kPapers">—</div><div class="k">论文卡（未标红 / 总数）</div></div>
+        <div class="kpi"><div class="v num" id="k2v">0.86</div><div class="k" id="k2k">当前最佳 F1（锚点论文报告值）</div></div>
+        <div class="kpi"><div class="v num" id="k3v">209 GB</div><div class="k" id="k3k">本地数据集 · WHU-STree-NJ（已登记）</div></div>
+        <div class="kpi"><div class="v num" id="k4v">1</div><div class="k" id="k4k">标红待核（演示集）</div></div>
+      </div>
+      <div>
+        <div class="split-label"><b id="chartTitle">方法对比图</b><span>数据源：卡片字段，不编数</span></div>
+        <div class="chart-ctl">
+          <button data-chart="bar" class="on">柱状</button>
+          <button data-chart="line">趋势</button>
+          <button id="styleBtn">切换样式标准</button>
+          <button id="rollbackBtn">时间线回滚</button>
+        </div>
+        <div class="card" style="padding:12px;"><div id="chartBox"></div><div class="empty" id="chartVer">版本 v3 · 刚刚保存（Ctrl+S 习惯位）</div></div>
+      </div>
+      <div class="para">
+        <h3>结论段（双行制）</h3>
+        <p><span class="lab">作者主张</span><span id="paraClaim">SegmentAnyTree 在多站点森林点云上报告了当前最好的单木分割结果，主张提示式分割可跨站点泛化。</span></p>
+        <p style="margin-top:8px;"><span class="lab">验证状态</span><span id="paraVerify" style="color:var(--warn)">部分验证</span><span id="paraVerifyNote">：后续工作在其自有数据上复现了主要趋势，但跨站点泛化幅度被两项工作质疑（见锚点论文引用图谱）。</span></p>
+      </div>
+      <div class="focus-extra">
+        <div class="card"><h3>图表编辑（聚焦态 · 对标 Tavotto）</h3><p class="claim">拖入绘图脚本直接改图、多图自动排版（对齐/参考线/安全边距）、样式标准批量套用、多格式导出。原型阶段先占位，施工时按组装清单接开源件。</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span class="step done"><span class="dot"></span>检索</span><span class="arrow">→</span>
+  <span class="step done"><span class="dot"></span>聚类</span><span class="arrow">→</span>
+  <span class="step done"><span class="dot"></span>路线</span><span class="arrow">→</span>
+  <span class="step now"><span class="dot"></span>推演</span><span class="arrow">→</span>
+  <span class="step"><span class="dot"></span>实验</span><span class="arrow">→</span>
+  <span class="step"><span class="dot"></span>成文</span>
+  <span class="footprint" id="footprint">足迹：主题输入 → 路线列表</span>
+</footer>
+
+<div class="overlay" id="deduceOverlay" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <header>
+      <div>
+        <h2 id="deduceTitle">路线推演</h2>
+        <div class="sub" id="deduceSub"></div>
+      </div>
+      <button id="deduceClose">关闭 ✕</button>
+    </header>
+    <div class="flow" id="flowBox"></div>
+    <h3 style="margin-bottom:8px;">推演产出 · 行动清单</h3>
+    <ol class="actions-list" id="actionList"></ol>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button class="primary" id="toTasks">转为任务列表</button>
+      <button id="deduceClose2">返回总览</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="focusOverlay" role="dialog" aria-modal="true">
+  <div class="sheet focus-sheet">
+    <header>
+      <div><h2 id="focusTitle">聚焦</h2><div class="sub">同一份数据的深度视图：在这里的改动会同步回总览。</div></div>
+      <button id="focusClose">关闭 ✕</button>
+    </header>
+    <div id="focusBody"></div>
+  </div>
+</div>
+
+<div class="overlay" id="verifyOverlay" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <header>
+      <div>
+        <h2>引用核验台</h2>
+        <div class="sub">把参考文献粘进来（一行一条），逐条向 Crossref 核验：<b>DOI 必须真实存在，且登记标题必须与所引标题对得上</b>——只查「DOI 存在」会放过「真 DOI 配假标题」这类最常见的编造。无 DOI 的条目会按标题反查候选。核验在你的浏览器里直连 Crossref 完成，不经过任何服务器。</div>
+      </div>
+      <button id="verifyClose">关闭 ✕</button>
+    </header>
+    <textarea class="vfy-input" id="vfyInput" placeholder="例：&#10;Geirhos, R., et al. Shortcut Learning in Deep Neural Networks. Nature Machine Intelligence, 2020. DOI: 10.1038/s42256-020-00257-z&#10;（一行一条，带不带 DOI 都可以）"></textarea>
+    <div class="vfy-row">
+      <button class="primary" id="vfyRun">开始核验</button>
+      <button id="vfyDemo">填入示例（含假引用）</button>
+      <button id="vfyClear">清空结果</button>
+      <span class="vfy-sum" id="vfyStatus">尚未核验。</span>
+    </div>
+    <div id="vfyResults"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mindOverlay" role="dialog" aria-modal="true">
+  <div class="sheet" style="width:min(1240px,96vw);">
+    <header>
+      <div>
+        <h2>思维导图 · 一张图理清这个课题</h2>
+        <div class="sub">主题在左，三条路线、资源与核验状态向右展开。内容直接取自当前界面数据（演示集或真实检索结果），不另编一份；点路线节点可直达它的推演流程图。</div>
+      </div>
+      <div style="display:flex; gap:8px; flex:none;">
+        <button id="mindExport">导出大纲 .md</button>
+        <button id="mindClose">关闭 ✕</button>
+      </div>
+    </header>
+    <div class="mind-wrap" id="mindSvgWrap"></div>
+  </div>
+</div>
+
+<script>
+/* ================= 工具 ================= */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function normTitle(s){ return String(s||'').toLowerCase().replace(/<[^>]+>/g,' ').replace(/[^a-z0-9\u4e00-\u9fa5 ]+/g,' ').replace(/\s+/g,' ').trim(); }
+function titleSim(a,b){
+  const A=new Set(normTitle(a).split(' ').filter(w=>w.length>1)), B=new Set(normTitle(b).split(' ').filter(w=>w.length>1));
+  if(!A.size||!B.size) return 0;
+  let inter=0; A.forEach(w=>{ if(B.has(w)) inter++; });
+  return inter/Math.max(A.size,B.size);
+}
+function extractDoi(text){
+  const m = String(text||'').match(/10\.\d{4,9}\/[^\s,;)\]」』"']+/i);
+  if(!m) return '';
+  return m[0].replace(/[.\u3002\uff0c,;:]+$/,'').trim();
+}
+
+/* ================= 演示数据（离线示例，字段已标注） ================= */
+const DEMO_PAPERS = [
+ {id:'p1', title:'SegmentAnyTree: A Sensor and Platform Agnostic Deep Learning Model for Tree Segmentation Using Laser Scanning Data', venue:'Remote Sensing of Environment', year:2024, cites:86, trend:'增速高', claim:'主张提示式分割可跨传感器、跨站点泛化，报告当前最佳单木分割结果。', verify:'部分验证 · 后续工作复现主要趋势，泛化幅度有质疑', vst:'st-dispute', doi:'10.1016/j.rse.2024.114367', url:'https://doi.org/10.1016/j.rse.2024.114367', source:'演示集'},
+ {id:'p2', title:'ForAINet: A Deep Learning Framework for Single Tree Segmentation in Forest Point Clouds', venue:'International Journal of Applied Earth Observation', year:2024, cites:41, trend:'增速中', claim:'主张稀疏卷积＋实例聚类在林业样地上取得稳定 F1。', verify:'未验证 · 尚无独立复现', vst:'st-none', doi:'', url:'#', source:'演示集'},
+ {id:'p3', title:'TreeLearn: A Deep Learning Method for Segmenting Individual Trees from Ground-Based LiDAR', venue:'ISPRS Journal', year:2023, cites:63, trend:'平稳', claim:'主张以偏移回归＋聚类在近地面 LiDAR 上分离粘连树冠。', verify:'已复现 · 两项后续工作在自有数据上复现', vst:'st-ok', doi:'', url:'#', source:'演示集'},
+ {id:'p4', title:'PointGroup: Dual-Set Point Grouping for 3D Instance Segmentation', venue:'CVPR', year:2020, cites:890, trend:'平稳', claim:'主张点分组＋评分网络奠定点云实例分割通用范式。', verify:'已复现 · 领域基线', vst:'st-ok', doi:'10.1109/CVPR42600.2020.01104', url:'https://doi.org/10.1109/CVPR42600.2020.01104', source:'演示集'},
+ {id:'p5', title:'DeepTreeFormer: Uncertainty-Aware Promptable Segmentation for Urban Trees', venue:'arXiv 预印本', year:2026, cites:3, trend:'新锐', claim:'主张在城市街道点云上 F1 达 0.93，显著超越现有方法。', verify:'待核 · 不进入结论区', vst:'st-none', doi:'', url:'#', source:'演示集', flagged:true, flag:'标红原因（演示样例）：声称的 DOI 在 Crossref 查无此条；期刊卷期信息与登记记录冲突；代码仓链接失效。此卡为核验演示样例——点「核验本列 DOI」可对真实条目现场核验。'}
+];
+const DEMO_REPOS = [
+ {id:'r1', name:'SegmentAnyTree 官方实现', stars:412, active:'3 天前活跃', lic:'MIT', use:'纵深路线起点代码', url:'#'},
+ {id:'r2', name:'PointGroup 官方实现', stars:1200, active:'30 天前活跃', lic:'MIT', use:'实例分割基线', url:'#'},
+ {id:'r3', name:'Open3D', stars:9800, active:'1 天前活跃', lic:'MIT', use:'点云预处理与可视化', url:'https://github.com/isl-org/Open3D'},
+ {id:'r4', name:'tree-toolkit（个人仓 · 演示）', stars:17, active:'90 天前活跃', lic:'未标注', use:'经典几何管线脚本集', url:'#'}
+];
+const ROUTES = [
+ {key:'deep', tag:'纵深路线', title:'提示式分割的跨站点泛化改进', desc:'沿 SegmentAnyTree 一线往下挖：针对城市行道树场景做提示策略与域适配，目标把跨站点掉点压到可接受范围。', anchors:'SegmentAnyTree（F1 0.86）· ForAINet · PointGroup', metric:'当前最佳 F1 0.86'},
+ {key:'cross', tag:'跨界路线', title:'借影像分割的提示学习做点云预标注', desc:'把二维影像基础模型的提示学习搬到点云：先用影像侧提示生成弱标签，再回灌点云模型，换数据效率。', anchors:'SegmentAnyTree · TreeLearn · SAM 系工作（演示）', metric:'相关工作最佳 F1 0.81'},
+ {key:'gap', tag:'空白位路线', title:'经典几何管线的可验证自动化', desc:'不追深度学习：把几何＋聚类管线做成每一步可核验、可回滚的自动化流程，算力门槛低，适合中小课题组。', anchors:'TreeLearn（几何对照）· Open3D · 本地基线实验', metric:'暂无公开基线 · 待自建'}
+];
+const FLOW = {
+ deep:[
+  {t:'问题', st:'st-lit', sl:'文献支撑', p:'跨站点泛化掉点：锚点论文自报跨站点 F1 下降约 6–9 个百分点（演示数值，出自锚点论文表格）。'},
+  {t:'数据', st:'st-lit', sl:'文献支撑', p:'WHU-STree-NJ 本地集 209 GB 已登记；需补 1 个异源城市行道树集作外部验证（待查：公开可用性）。'},
+  {t:'方法', st:'st-hyp', sl:'推演假设', p:'提示采样策略＋轻量域适配头；基线复用 SegmentAnyTree 官方实现（MIT，可直接用）。'},
+  {t:'验证', st:'st-todo', sl:'待验证', p:'与本地经典管线基线同集对照；指标 F1 与过分割率；验证节点将直连实验记录（v0.2）。'},
+  {t:'产出', st:'st-hyp', sl:'推演假设', p:'改进模型＋跨站点评测表＋失败画廊（粘连树冠、遮挡样本）。'},
+  {t:'风险', st:'st-todo', sl:'待验证', p:'异源数据许可未定；提示策略对点密度敏感，可能需按密度分层评测。'}
+ ],
+ cross:[
+  {t:'问题', st:'st-lit', sl:'文献支撑', p:'点云标注成本高：单木实例标注依赖人工，现有公开标注集规模有限。'},
+  {t:'数据', st:'st-todo', sl:'待验证', p:'需同步影像—点云配对数据（待查：本地集是否带影像）。'},
+  {t:'方法', st:'st-hyp', sl:'推演假设', p:'影像提示 → 弱标签 → 点云模型自训练；引用图谱显示该组合尚无单木分割完整实现。'},
+  {t:'验证', st:'st-todo', sl:'待验证', p:'弱标签噪声率先小样测，再决定是否扩量。'},
+  {t:'产出', st:'st-hyp', sl:'推演假设', p:'弱标注流水线＋噪声分析报告。'},
+  {t:'风险', st:'st-todo', sl:'待验证', p:'跨模态配准误差可能吃掉全部收益。'}
+ ],
+ gap:[
+  {t:'问题', st:'st-lit', sl:'文献支撑', p:'经典几何管线每步不可核验：参数靠经验、失败不可回溯，中小课题组复现成本高。'},
+  {t:'数据', st:'st-lit', sl:'文献支撑', p:'本地集已有 26 批次处理记录，可直接作回归集。'},
+  {t:'方法', st:'st-hyp', sl:'推演假设', p:'把现有管线拆为带校验点的步骤链，每步留证据与参数快照。'},
+  {t:'验证', st:'st-todo', sl:'待验证', p:'以点级 F1 历史最佳 0.4595（本地实验记录）为对照基线。'},
+  {t:'产出', st:'st-hyp', sl:'推演假设', p:'可回滚管线＋步骤级失败图谱。'},
+  {t:'风险', st:'st-todo', sl:'待验证', p:'上限低于深度学习路线，定位是稳与可核验，不是 SOTA。'}
+ ]
+};
+const ACTIONS = {
+ deep:['精读 SegmentAnyTree 的跨站点实验节，核对掉点口径','跑通官方实现并在本机小样复现基线','确认异源城市数据集的公开许可'],
+ cross:['查本地集是否带同步影像','小样测弱标签噪声率（100 棵树）','读 SAM 系点云迁移的两篇最新工作'],
+ gap:['整理现有 26 批次处理记录为回归集','给管线每步加参数快照与校验点','确立点级 F1 对照表']
+};
+
+/* ================= 状态 ================= */
+let PAPERS = DEMO_PAPERS.slice();
+let REPOS = DEMO_REPOS.slice();
+let liveMode = false;
+let mine = new Set(['p3']);
+let mineOrder = [];
+let colMode = 'papers';
+let chartMode = 'bar', chartVer = 3, chartStyle = 0;
+let CHART = [ {m:'SegmentAnyTree', v:0.86, fmt:'0.86'}, {m:'ForAINet', v:0.83, fmt:'0.83'}, {m:'TreeLearn', v:0.80, fmt:'0.80'}, {m:'PointGroup', v:0.74, fmt:'0.74'}, {m:'经典几何管线（本地）', v:0.46, fmt:'0.46'} ];
+let vfyState = {}; // paperId -> {cls:'ok|warn|bad|none', label:'...'}
+
+try{ const saved = JSON.parse(localStorage.getItem('ra_mine')||'[]'); if(Array.isArray(saved)) mine = new Set(saved); }catch(e){}
+function persistMine(){ try{ localStorage.setItem('ra_mine', JSON.stringify([...mine])); }catch(e){} }
+
+/* ================= 渲染：资源列 ================= */
+function vfyBadge(id){
+  const s = vfyState[id]; if(!s) return '';
+  return `<span class="badge ${s.cls}">${esc(s.label)}</span>`;
+}
+function paperCard(p){
+  const inMine = mine.has(p.id);
+  const authors = p.authors ? `<span>${esc(p.authors)}</span>` : '';
+  return `<article class="card ${p.flagged?'flagged':''}">
+    <h3><a href="${esc(p.url||'#')}" target="_blank" rel="noopener">${esc(p.title)}</a>${vfyBadge(p.id)}</h3>
+    <div class="meta"><span>${esc(p.venue||'出处未知')} · <span class="num">${esc(p.year||'')}</span></span>${authors}<span>引用 <span class="num">${p.cites==null?'—':p.cites}</span>${p.trend?` <span class="trend">${esc(p.trend)}</span>`:''}</span>${p.doi?`<span class="num">DOI ${esc(p.doi)}</span>`:'<span>无 DOI</span>'}<span>源 ${esc(p.source||'')}</span></div>
+    <p class="claim"><span class="lab">作者主张</span>${esc(p.claim||'（该源未提供摘要，精读后补）')}</p>
+    <p class="verify"><span class="lab">验证状态</span><span class="${esc(p.vst||'st-none')}">${esc(p.verify||'未验证')}</span></p>
+    ${p.flagged?`<p class="flag-note">${esc(p.flag||'')}</p>`:''}
+    <div class="ops">
+      <button onclick="toggleMine('${p.id}')">${inMine?'移出我的':'收藏'}</button>
+      <button onclick="pinMine('${p.id}')">置顶</button>
+      <button onclick="askPaper('${p.id}')">围绕它追问</button>
+      ${p.doi?`<button onclick="verifyOnePaper('${p.id}')">核验 DOI</button>`:''}
+    </div></article>`;
+}
+function repoCard(r){
+  const inMine = mine.has(r.id);
+  return `<article class="card">
+    <h3><a href="${esc(r.url||'#')}" target="_blank" rel="noopener">${esc(r.name)}</a></h3>
+    <div class="meta"><span>★ <span class="num">${r.stars}</span></span><span>${esc(r.active||'')}</span><span>许可证 ${esc(r.lic||'未标注')}</span></div>
+    <p class="claim"><span class="lab">用途</span>${esc(r.use||'')}</p>
+    <div class="ops"><button onclick="toggleMine('${r.id}')">${inMine?'移出我的':'收藏'}</button><button onclick="pinMine('${r.id}')">置顶</button></div></article>`;
+}
+function renderRes(){
+  const pool = colMode==='papers'?PAPERS:REPOS;
+  const cardFn = colMode==='papers'?paperCard:repoCard;
+  const mineItems = pool.filter(x=>mine.has(x.id));
+  const ordered = mineItems.sort((a,b)=>mineOrder.indexOf(a.id)-mineOrder.indexOf(b.id));
+  document.getElementById('mineZone').innerHTML = ordered.length? ordered.map(cardFn).join('') : '<div class="empty">还没有收藏。点下方卡片的「收藏」或「置顶」，会进入这里。</div>';
+  document.getElementById('poolZone').innerHTML = pool.filter(x=>!mine.has(x.id)).map(cardFn).join('') || '<div class="empty">候选池已空。</div>';
+  document.getElementById('mineCount').textContent = '已收 '+ordered.length+' 项';
+  updateKpis();
+}
+function updateKpis(){
+  const ok = PAPERS.filter(p=>!p.flagged).length;
+  document.getElementById('kPapers').textContent = ok + ' / ' + PAPERS.length;
+  if(liveMode){
+    const top = PAPERS.reduce((a,p)=>Math.max(a, p.cites||0), 0);
+    document.getElementById('k2v').textContent = top.toLocaleString();
+    document.getElementById('k2k').textContent = '当前列表最高被引（真实 API）';
+    document.getElementById('k3v').textContent = PAPERS.length + REPOS.length;
+    document.getElementById('k3k').textContent = '本轮检索结果总数（论文＋仓库）';
+    const checked = Object.keys(vfyState).length;
+    document.getElementById('k4v').textContent = PAPERS.filter(p=>p.flagged).length + ' / 已核 ' + checked;
+    document.getElementById('k4k').textContent = '标红待核 / 已核验条数';
+  }
+}
+function toggleMine(id){ mine.has(id)?mine.delete(id):mine.add(id); persistMine(); renderRes(); }
+function pinMine(id){ mine.add(id); mineOrder = [id, ...mineOrder.filter(x=>x!==id)]; persistMine(); renderRes(); }
+function askPaper(id){
+  const p = PAPERS.find(x=>x.id===id); if(!p) return;
+  addMsg('已绑定论文《'+p.title.slice(0,42)+'…》。你可以问：它的方法与数据怎么设计的？（原型回复将带出处；正式版给页码级引用）');
+  setFoot('足迹：论文列 → 绑定《'+p.title.slice(0,18)+'…》追问');
+}
+
+/* ================= 路线与推演 ================= */
+function renderRoutes(){
+  document.getElementById('routeZone').innerHTML = ROUTES.map(r=>`
+   <div class="route" onclick="openDeduce('${r.key}')" role="button" tabindex="0">
+     <span class="r-tag">${esc(r.tag)}</span><h3>${esc(r.title)}</h3><p>${esc(r.desc)}</p>
+     <div class="anchors">锚点：<b>${esc(r.anchors)}</b><br>指标：<b class="num">${esc(r.metric)}</b> · 点开进入流程图推演 →</div>
+   </div>`).join('');
+}
+function addMsg(text){
+  const d=document.createElement('div'); d.className='msg'; d.textContent=text;
+  document.getElementById('chatLog').appendChild(d);
+}
+function setFoot(t){ document.getElementById('footprint').textContent=t; }
+function openDeduce(key){
+  const r = ROUTES.find(x=>x.key===key);
+  document.getElementById('deduceTitle').textContent = r.tag+' · '+r.title;
+  document.getElementById('deduceSub').textContent = '子 Agent 小推演：只做路径展开与可行性标注，不跑实验。节点已按「填真数」规矩填写，填不出的标为待查。（演示课题流程）';
+  document.getElementById('flowBox').innerHTML = FLOW[key].map(n=>`
+    <div class="node"><div class="rail"><span class="n-dot" style="background:${n.st==='st-lit'?'var(--ok)':n.st==='st-hyp'?'var(--warn)':'var(--ink-3)'}"></span><span class="n-line"></span></div>
+    <div class="n-body"><h3>${esc(n.t)}<span class="st ${esc(n.st)}">${esc(n.sl)}</span></h3><p>${esc(n.p)}</p></div></div>`).join('');
+  document.getElementById('actionList').innerHTML = ACTIONS[key].map(a=>`<li>${esc(a)}</li>`).join('');
+  document.getElementById('deduceOverlay').classList.add('open');
+  setFoot('足迹：路线列表 → '+r.tag+'推演');
+}
+function closeDeduce(){ document.getElementById('deduceOverlay').classList.remove('open'); }
+
+/* ================= 图表 ================= */
+function renderChart(){
+  const box=document.getElementById('chartBox');
+  const W=340,H=170, max=Math.max(...CHART.map(d=>d.v), 0.01);
+  if(chartMode==='bar'){
+    const bw=44, gap=(W-bw*CHART.length)/(CHART.length+1);
+    box.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="对比柱状图">`+
+      CHART.map((d,i)=>{const h=(H-36)*d.v/max, x=gap+i*(bw+gap), y=H-20-h;
+        return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${chartStyle? '#b7a888':'#002fa7'}" opacity="${0.55+0.45*d.v/max}"></rect>
+        <text x="${x+bw/2}" y="${y-5}" text-anchor="middle" font-size="10" fill="#1c1e24">${esc(d.fmt)}</text>
+        <text x="${x+bw/2}" y="${H-6}" text-anchor="middle" font-size="8.5" fill="#4a4f59">${esc(d.m.slice(0,7))}</text>`;}).join('')+`</svg>`;
+  } else {
+    const pts = CHART.map((d,i)=>`${30+i*(W-50)/Math.max(CHART.length-1,1)},${H-24-(H-44)*d.v/max}`).join(' ');
+    box.innerHTML = `<svg width="100%" viewBox="0 0 ${W} ${H}" role="img" aria-label="趋势图"><polyline points="${pts}" fill="none" stroke="${chartStyle?'#b7a888':'#002fa7'}" stroke-width="2"/>`+
+      CHART.map((d,i)=>{const x=30+i*(W-50)/Math.max(CHART.length-1,1), y=H-24-(H-44)*d.v/max; return `<circle cx="${x}" cy="${y}" r="3.5" fill="#f6f3ec" stroke="#002fa7" stroke-width="2"/><text x="${x}" y="${y-9}" text-anchor="middle" font-size="10" fill="#1c1e24">${esc(d.fmt)}</text>`;}).join('')+`</svg>`;
+  }
+  document.getElementById('chartVer').textContent = '版本 v'+chartVer+' · 已保存 · 样式标准 '+(chartStyle?'卡其稳重':'克莱因蓝');
+}
+
+/* ================= 聚焦 ================= */
+const FOCUS_TITLES={res:'资源列 · 聚焦', chat:'对话与路线 · 聚焦', data:'数据与图表 · 聚焦'};
+function openFocus(which){
+  const panel = document.getElementById('panel-'+which);
+  document.getElementById('focusTitle').textContent = FOCUS_TITLES[which];
+  const body=document.getElementById('focusBody'); body.innerHTML='';
+  body.appendChild(panel.querySelector('.p-body').cloneNode(true));
+  document.getElementById('focusOverlay').classList.add('open');
+  setFoot('足迹：总览 → '+FOCUS_TITLES[which]);
+}
+function closeFocus(){ document.getElementById('focusOverlay').classList.remove('open'); }
+
+/* ================= 真实检索 ================= */
+const MAILTO = 'research-agent-prototype@example.com';
+function srcOn(name){ const b=document.querySelector(`[data-src="${name}"]`); return b && b.classList.contains('on'); }
+function abstractFromInverted(idx){
+  if(!idx) return '';
+  const words=[]; Object.entries(idx).forEach(([w,ps])=>ps.forEach(p=>words[p]=w));
+  return words.join(' ').slice(0,220);
+}
+async function fetchOpenAlex(q){
+  const u = `https://api.openalex.org/works?search=${encodeURIComponent(q)}&per-page=12&mailto=${MAILTO}`;
+  const r = await fetch(u); if(!r.ok) throw new Error('OpenAlex '+r.status);
+  const j = await r.json();
+  return (j.results||[]).map(w=>({
+    id:'oa:'+(w.id||'').split('/').pop(),
+    title:w.title||w.display_name||'(无标题)',
+    venue:(w.primary_location&&w.primary_location.source&&w.primary_location.source.display_name)||'',
+    year:w.publication_year||'',
+    cites:w.cited_by_count||0,
+    authors:(w.authorships||[]).slice(0,3).map(a=>a.author.display_name).join(', '),
+    doi:w.doi? w.doi.replace('https://doi.org/','') : '',
+    url:w.doi||w.id||'#',
+    claim:abstractFromInverted(w.abstract_inverted_index),
+    verify:'未验证 · 元数据来自 OpenAlex', vst:'st-none', source:'OpenAlex'
+  }));
+}
+async function fetchS2(q){
+  const u = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(q)}&limit=12&fields=title,year,venue,citationCount,externalIds,authors,url,abstract`;
+  const r = await fetch(u); if(!r.ok) throw new Error('S2 '+r.status);
+  const j = await r.json();
+  return (j.data||[]).map(p=>({
+    id:'s2:'+(p.paperId||''),
+    title:p.title||'(无标题)',
+    venue:p.venue||'',
+    year:p.year||'',
+    cites:p.citationCount||0,
+    authors:(p.authors||[]).slice(0,3).map(a=>a.name).join(', '),
+    doi:(p.externalIds&&p.externalIds.DOI)||'',
+    url:p.url||'#',
+    claim:(p.abstract||'').slice(0,220),
+    verify:'未验证 · 元数据来自 Semantic Scholar', vst:'st-none', source:'S2'
+  }));
+}
+async function fetchArxiv(q){
+  const u = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(q)}&max_results=8`;
+  const r = await fetch(u); if(!r.ok) throw new Error('arXiv '+r.status);
+  const txt = await r.text();
+  const doc = new DOMParser().parseFromString(txt,'text/xml');
+  return [...doc.querySelectorAll('entry')].map(e=>{
+    const doiEl = e.getElementsByTagName('arxiv:doi')[0];
+    return {
+      id:'ax:'+(e.querySelector('id')?e.querySelector('id').textContent:''),
+      title:(e.querySelector('title')?e.querySelector('title').textContent:'').replace(/\s+/g,' ').trim(),
+      venue:'arXiv', year:(e.querySelector('published')?e.querySelector('published').textContent:'').slice(0,4),
+      cites:null,
+      authors:[...e.querySelectorAll('author name')].slice(0,3).map(a=>a.textContent).join(', '),
+      doi:doiEl? doiEl.textContent : '',
+      url:e.querySelector('id')?e.querySelector('id').textContent:'#',
+      claim:(e.querySelector('summary')?e.querySelector('summary').textContent:'').replace(/\s+/g,' ').slice(0,220),
+      verify:'未验证 · 元数据来自 arXiv', vst:'st-none', source:'arXiv'
+    };
+  });
+}
+async function fetchGithub(q){
+  const u = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=8`;
+  const r = await fetch(u, {headers:{'Accept':'application/vnd.github+json'}}); if(!r.ok) throw new Error('GitHub '+r.status);
+  const j = await r.json();
+  return (j.items||[]).map(repo=>({
+    id:'gh:'+repo.full_name,
+    name:repo.full_name,
+    stars:repo.stargazers_count||0,
+    active:relDays(repo.pushed_at)+'前活跃',
+    lic:(repo.license&&repo.license.spdx_id)||'未标注',
+    use:repo.description||'（无描述）',
+    url:repo.html_url
+  }));
+}
+function relDays(iso){
+  const d = Math.max(0, Math.round((Date.now()-new Date(iso).getTime())/86400000));
+  return d===0?'今天':d+' 天';
+}
+async function runSearch(){
+  const q = document.getElementById('topicInput').value.trim();
+  if(!q){ addMsg('先输入一个研究主题，再点检索。'); return; }
+  const btn=document.getElementById('searchBtn'); btn.disabled=true; btn.textContent='检索中…';
+  addMsg('开始真实检索：'+q+'（多源并行 → 按 DOI/标题去重 → 按引用排序）');
+  setFoot('足迹：主题输入 → 真实检索中');
+  const jobs=[], notes=[];
+  if(srcOn('openalex')) jobs.push(['OpenAlex', fetchOpenAlex(q)]);
+  if(srcOn('s2')) jobs.push(['Semantic Scholar', fetchS2(q)]);
+  if(srcOn('arxiv')) jobs.push(['arXiv', fetchArxiv(q)]);
+  if(srcOn('github')) jobs.push(['GitHub', fetchGithub(q)]);
+  const results = await Promise.allSettled(jobs.map(j=>j[1]));
+  let papers=[], repos=[];
+  results.forEach((res,i)=>{
+    const name = jobs[i][0];
+    if(res.status==='fulfilled'){
+      if(name==='GitHub'){ repos = res.value; notes.push('GitHub '+res.value.length+' 仓'); }
+      else { papers = papers.concat(res.value); notes.push(name+' '+res.value.length+' 篇'); }
+    } else {
+      notes.push(name+' 失败（'+(name==='arXiv'?'浏览器直连受 CORS 限制，arXiv 论文已由 OpenAlex 覆盖':'网络或限流')+'）');
+      if(name==='arXiv'){ const b=document.querySelector('[data-src="arxiv"]'); if(b){ b.classList.add('dead'); b.title='arXiv API 不开放浏览器跨域直连；其论文已由 OpenAlex 收录'; } }
+    }
+  });
+  if(!papers.length && !repos.length){
+    addMsg('本轮检索全军覆没：'+notes.join('；')+'。演示集保留未动，检查网络后重试。');
+    btn.disabled=false; btn.textContent='检索并生成路线'; return;
+  }
+  const seen=new Map();
+  papers.forEach(p=>{
+    const key = p.doi? 'doi:'+p.doi.toLowerCase() : 't:'+normTitle(p.title);
+    const old = seen.get(key);
+    if(!old || (p.cites||0)>(old.cites||0)) seen.set(key,p);
+  });
+  PAPERS = [...seen.values()].sort((a,b)=>(b.cites||0)-(a.cites||0)).slice(0,14);
+  if(repos.length) REPOS = repos;
+  vfyState = {};
+  liveMode = true;
+  const tag=document.getElementById('modeTag'); tag.textContent='真实数据 · '+notes.join(' · '); tag.classList.add('live');
+  document.getElementById('poolHint').textContent='真实检索结果 · 按引用数排序';
+  if(PAPERS.length){
+    CHART = PAPERS.slice(0,5).map(p=>({m:p.title.split(':')[0].slice(0,16), v:p.cites||0, fmt:(p.cites||0).toLocaleString()}));
+    document.getElementById('chartTitle').textContent='被引 Top 5（真实数据）';
+    const top = PAPERS[0];
+    document.getElementById('paraClaim').textContent = top.claim || top.title;
+    document.getElementById('paraVerify').textContent = '未验证';
+    document.getElementById('paraVerify').style.color = 'var(--ink-3)';
+    document.getElementById('paraVerifyNote').textContent = '：结论双行制要求验证状态有引用图谱证据；本条仅有元数据，未验证即如实写未验证。顶栏「引用核验台」或卡片上「核验 DOI」可现场核验其引用真实性。';
+  }
+  renderRes(); renderChart();
+  addMsg('检索完成（真实数据）：'+notes.join('；')+'。论文 '+PAPERS.length+' 篇、仓库 '+REPOS.length+' 个，已按引用排序。\n注意：三条研究路线与推演仍是演示课题的内容——路线归纳需要接入大模型 API（本地优先版走 MCP 工具层），单文件版先把「检索真实＋引用可核验」这两件命根子做实。');
+  setFoot('足迹：主题输入 → 真实检索完成');
+  btn.disabled=false; btn.textContent='检索并生成路线';
+}
+
+/* ================= 引用核验（Crossref） ================= */
+async function crossrefByDoi(doi){
+  const r = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}?mailto=${MAILTO}`);
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error('Crossref '+r.status);
+  const j = await r.json(); return j.message;
+}
+async function crossrefSearchTitle(title){
+  const r = await fetch(`https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(title)}&rows=1&mailto=${MAILTO}`);
+  if(!r.ok) throw new Error('Crossref '+r.status);
+  const j = await r.json();
+  return (j.message.items&&j.message.items[0])||null;
+}
+function canonLine(m){
+  if(!m) return '';
+  const t=(m.title&&m.title[0])||'';
+  const ct=(m['container-title']&&m['container-title'][0])||'';
+  const yr=(m.published&&m.published['date-parts']&&m.published['date-parts'][0]&&m.published['date-parts'][0][0])||(m.issued&&m.issued['date-parts']&&m.issued['date-parts'][0][0])||'';
+  return [t, ct, yr].filter(Boolean).join(' · ');
+}
+async function verifyReference(line){
+  const doi = extractDoi(line);
+  const guess = line.replace(/doi[:：]?\s*\S+/ig,'').replace(/https?:\/\/\S+/g,'').replace(/^\s*[\[\(]?\d+[\]\)\.、]?\s*/,'').trim();
+  if(doi){
+    const m = await crossrefByDoi(doi);
+    if(!m) return {cls:'bad', label:'✗ 查无此 DOI', detail:'Crossref 中不存在 DOI '+doi+'——这条引用是编造的，或 DOI 抄错。'};
+    const regTitle=(m.title&&m.title[0])||'';
+    const sim = guess.length>12 ? titleSim(guess, regTitle) : 1;
+    if(sim>=0.55) return {cls:'ok', label:'✓ 已核验', canon:canonLine(m), detail:'DOI 真实存在且登记标题与所引一致（相似度 '+sim.toFixed(2)+'）。'};
+    if(sim>=0.30) return {cls:'warn', label:'⚠ 存疑', canon:canonLine(m), detail:'DOI 存在，但登记标题与所引标题只部分对得上（相似度 '+sim.toFixed(2)+'），请人工核对——可能是标题转述走样，也可能是张冠李戴。'};
+    return {cls:'bad', label:'✗ 标题不符', canon:canonLine(m), detail:'DOI 真实存在，但登记的是另一篇论文（相似度 '+sim.toFixed(2)+'）——典型的「真 DOI 配假标题」编造。'};
+  }
+  if(guess.length>=12){
+    const m = await crossrefSearchTitle(guess);
+    if(m && m.title && titleSim(guess, m.title[0])>=0.55)
+      return {cls:'warn', label:'⚠ 无 DOI · 疑似此篇', canon:canonLine(m), detail:'原文未给 DOI；按标题在 Crossref 反查到高度相似的登记记录，DOI 应为 '+(m.DOI||'—')+'，请补上并人工确认。'};
+    return {cls:'bad', label:'✗ 查无此文', detail:'未给 DOI，且按标题在 Crossref 反查不到相符记录——高度可疑。'};
+  }
+  return {cls:'none', label:'？ 无法解析', detail:'这一行太短或格式无法识别，拆不出标题与 DOI。'};
+}
+async function verifyOnePaper(id){
+  const p = PAPERS.find(x=>x.id===id); if(!p||!p.doi) return;
+  vfyState[id]={cls:'none', label:'核验中…'}; renderRes();
+  try{
+    const res = await verifyReference(p.title+' DOI: '+p.doi);
+    vfyState[id]={cls:res.cls, label:res.label};
+    if(res.cls==='bad'){ p.flagged=true; p.flag='核验标红：'+res.detail; p.verify='核验不通过'; p.vst='st-dispute'; }
+  }catch(e){ vfyState[id]={cls:'none', label:'核验失败·网络'}; }
+  renderRes();
+}
+async function verifyCurrentList(){
+  const targets = PAPERS.filter(p=>p.doi);
+  document.getElementById('verifyOverlay').classList.add('open');
+  const box=document.getElementById('vfyResults');
+  document.getElementById('vfyStatus').textContent='正在核验本列 '+targets.length+' 条带 DOI 的论文…';
+  box.innerHTML='';
+  for(const p of targets){ await verifyOnePaper(p.id); }
+  const bad = targets.filter(p=>vfyState[p.id]&&vfyState[p.id].cls==='bad').length;
+  document.getElementById('vfyStatus').textContent='本列核验完成：'+targets.length+' 条，其中不通过 '+bad+' 条（已在卡片上标红）。无 DOI 的条目请粘到核验台按标题反查。';
+  renderRes();
+}
+const VF_DEMO = [
+ 'Geirhos, R., Jacobsen, J.-H., Michaelis, C., et al. Shortcut Learning in Deep Neural Networks. Nature Machine Intelligence 2, 665-673 (2020). DOI: 10.1038/s42256-020-00257-z',
+ 'He, K., Zhang, X., Ren, S., Sun, J. Deep Residual Learning for Image Recognition. CVPR 2016. DOI: 10.1109/CVPR.2016.90',
+ 'Zhang, L., et al. Quantum-Enhanced Tree Segmentation with Photonic Neural Fields. Nature 640, 112-118 (2025). DOI: 10.1038/s41586-025-99999-9',
+ 'Vaswani, A., et al. Attention Is All You Need. NeurIPS 2017. DOI: 10.1016/j.rse.2024.114367',
+ 'Li, W., et al. A Survey of Point Cloud Segmentation for Forest Inventory. Remote Sensing 15(3), 812 (2023).'
+];
+async function runVerifyBox(){
+  const raw = document.getElementById('vfyInput').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!raw.length){ document.getElementById('vfyStatus').textContent='先粘几条参考文献进来（一行一条）。'; return; }
+  const btn=document.getElementById('vfyRun'); btn.disabled=true; btn.textContent='核验中…';
+  const box=document.getElementById('vfyResults'); box.innerHTML='';
+  let counts={ok:0,warn:0,bad:0,none:0};
+  for(const line of raw){
+    const div=document.createElement('div'); div.className='vfy-item';
+    div.innerHTML='<span class="badge none">核验中…</span> <span class="src">'+esc(line)+'</span>';
+    box.appendChild(div);
+    try{
+      const res = await verifyReference(line);
+      counts[res.cls]=(counts[res.cls]||0)+1;
+      div.className='vfy-item '+(res.cls==='bad'?'bad':res.cls==='warn'?'warn':'');
+      div.innerHTML='<span class="badge '+res.cls+'">'+esc(res.label)+'</span> <span class="src">'+esc(line)+'</span>'+
+        (res.canon?'<br><span class="canon">登记记录：'+esc(res.canon)+'</span>':'')+
+        '<br>'+esc(res.detail);
+    }catch(e){
+      counts.none++;
+      div.innerHTML='<span class="badge none">？ 核验失败</span> <span class="src">'+esc(line)+'</span><br>网络或 Crossref 限流，稍后重试这一条。';
+    }
+  }
+  document.getElementById('vfyStatus').textContent='核验完成：共 '+raw.length+' 条 — 已核验 '+counts.ok+'、存疑/待补 '+counts.warn+'、不通过 '+counts.bad+'、无法判定 '+counts.none+'。';
+  btn.disabled=false; btn.textContent='开始核验';
+}
+
+/* ================= 思维导图 ================= */
+function mindTree(){
+  const topic = document.getElementById('topicInput').value.trim() || '（未命名主题）';
+  const routeNodes = ROUTES.map(r=>({
+    label: r.tag+'：'+r.title, kind:'route', key:r.key,
+    children: [
+      {label:'锚点：'+r.anchors, kind:'leaf'},
+      ...FLOW[r.key].map(n=>({label:n.t+'：'+n.p.slice(0,40)+(n.p.length>40?'…':''), kind:'leaf'}))
+    ]
+  }));
+  const paperNodes = PAPERS.slice(0,5).map(p=>({label:p.title.split(':')[0].slice(0,30)+'（'+(p.cites==null?'—':p.cites)+' 引）', kind:'leaf'}));
+  const repoNodes = REPOS.slice(0,5).map(r=>({label:r.name+' ★'+r.stars, kind:'leaf'}));
+  const checked = Object.keys(vfyState).length;
+  return { label: topic, kind:'root', children: [
+    ...routeNodes,
+    {label:'资源 · 论文 Top 5', kind:'branch', children: paperNodes.length?paperNodes:[{label:'（暂无）', kind:'leaf'}]},
+    {label:'资源 · 仓库', kind:'branch', children: repoNodes.length?repoNodes:[{label:'（暂无）', kind:'leaf'}]},
+    {label:'引用核验', kind:'branch', children: [
+      {label: liveMode? '当前：真实检索结果':'当前：演示集', kind:'leaf'},
+      {label: '已核验 '+checked+' 条 · 标红 '+PAPERS.filter(p=>p.flagged).length+' 条', kind:'leaf'}
+    ]}
+  ]};
+}
+function layoutMind(node, depth, state){
+  node._depth = depth;
+  if(!node.children || !node.children.length){ node._y = state.y; state.y += 36; return; }
+  node.children.forEach(c=>layoutMind(c, depth+1, state));
+  node._y = (node.children[0]._y + node.children[node.children.length-1]._y)/2;
+}
+function renderMind(){
+  const tree = mindTree();
+  const state = {y: 16};
+  layoutMind(tree, 0, state);
+  const colX = d => 16 + d*380;
+  let maxX = 0; const parts = [];
+  (function draw(n){
+    const disp = n.label.length>34 ? n.label.slice(0,34)+'…' : n.label;
+    const w = Math.min(368, Math.max(96, disp.length*12.5 + 24));
+    const x = colX(n._depth), y = n._y;
+    maxX = Math.max(maxX, x + w);
+    if(n.children) n.children.forEach(c=>{
+      const cx = colX(c._depth), cy = c._y + 14, sx = x + w, sy = y + 14;
+      parts.push(`<path d="M ${sx} ${sy} C ${sx+44} ${sy}, ${cx-44} ${cy}, ${cx} ${cy}" fill="none" stroke="#b7a888" stroke-width="1.5"/>`);
+    });
+    const fill = n.kind==='root' ? '#002fa7' : n.kind==='route' ? '#e3e9f8' : n.kind==='branch' ? '#efece3' : '#fbf9f4';
+    const tfill = n.kind==='root' ? '#ffffff' : '#1c1e24';
+    const click = n.kind==='route' ? ` onclick="closeMind(); openDeduce('${n.key}')" style="cursor:pointer"` : '';
+    parts.push(`<g${click}><rect x="${x}" y="${y}" width="${w}" height="28" rx="8" fill="${fill}" stroke="#ddd6c6"/><text x="${x+12}" y="${y+18}" font-size="12" fill="${tfill}">${esc(disp)}</text></g>`);
+    if(n.children) n.children.forEach(draw);
+  })(tree);
+  const H = state.y + 20;
+  document.getElementById('mindSvgWrap').innerHTML = `<svg width="${maxX+16}" height="${H}" viewBox="0 0 ${maxX+16} ${H}" role="img" aria-label="研究主题思维导图">${parts.join('')}</svg>`;
+}
+function openMind(){ renderMind(); document.getElementById('mindOverlay').classList.add('open'); setFoot('足迹：总览 → 思维导图'); }
+function closeMind(){ document.getElementById('mindOverlay').classList.remove('open'); }
+function mindToMd(node, depth, out){
+  out.push('  '.repeat(depth) + '- ' + node.label);
+  (node.children||[]).forEach(c=>mindToMd(c, depth+1, out));
+}
+function exportMind(){
+  const out = []; mindToMd(mindTree(), 0, out);
+  const blob = new Blob(['# 思维导图大纲\n\n'+out.join('\n')], {type:'text/markdown'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mindmap-outline.md'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+document.getElementById('mindOpenBtn').onclick = openMind;
+document.getElementById('mindClose').onclick = closeMind;
+document.getElementById('mindExport').onclick = exportMind;
+
+/* ================= 事件 ================= */
+document.getElementById('tabPapers').onclick=e=>{colMode='papers'; e.currentTarget.classList.add('on'); document.getElementById('tabRepos').classList.remove('on'); renderRes();};
+document.getElementById('tabRepos').onclick=e=>{colMode='repos'; e.currentTarget.classList.add('on'); document.getElementById('tabPapers').classList.remove('on'); renderRes();};
+document.querySelectorAll('[data-src]').forEach(b=>b.onclick=()=>{ b.classList.toggle('on'); if(b.dataset.src==='web'&&b.classList.contains('on')){ addMsg('网页检索需要后端搜索服务，单文件版未接入，已自动取消勾选。'); b.classList.remove('on'); } });
+document.querySelectorAll('[data-focus]').forEach(b=>b.onclick=()=>openFocus(b.dataset.focus));
+document.querySelectorAll('[data-chart]').forEach(b=>b.onclick=()=>{chartMode=b.dataset.chart; document.querySelectorAll('[data-chart]').forEach(x=>x.classList.toggle('on', x===b)); renderChart();});
+document.getElementById('styleBtn').onclick=()=>{chartStyle=1-chartStyle; chartVer++; renderChart();};
+document.getElementById('rollbackBtn').onclick=()=>{ if(chartVer>1){chartVer--; renderChart();} };
+document.getElementById('deduceClose').onclick=closeDeduce;
+document.getElementById('deduceClose2').onclick=closeDeduce;
+document.getElementById('focusClose').onclick=closeFocus;
+document.getElementById('toTasks').onclick=()=>{ closeDeduce(); addMsg('行动清单已转为任务列表（演示）：任务会出现在底部任务流的「实验」节点下。'); };
+document.getElementById('searchBtn').onclick=runSearch;
+document.getElementById('topicInput').addEventListener('keydown',e=>{ if(e.key==='Enter') runSearch(); });
+document.getElementById('verifyOpenBtn').onclick=()=>document.getElementById('verifyOverlay').classList.add('open');
+document.getElementById('verifyClose').onclick=()=>document.getElementById('verifyOverlay').classList.remove('open');
+document.getElementById('verifyListBtn').onclick=verifyCurrentList;
+document.getElementById('vfyRun').onclick=runVerifyBox;
+document.getElementById('vfyDemo').onclick=()=>{ document.getElementById('vfyInput').value = VF_DEMO.join('\n'); document.getElementById('vfyStatus').textContent='示例已填入：5 条里埋了 1 条假 DOI、1 条真 DOI 配假标题，点「开始核验」看能不能全抓出来。'; };
+document.getElementById('vfyClear').onclick=()=>{ document.getElementById('vfyResults').innerHTML=''; document.getElementById('vfyStatus').textContent='尚未核验。'; };
+document.getElementById('chatSend').onclick=()=>{
+  const v=document.getElementById('chatInput').value.trim(); if(!v) return;
+  addMsg('你问：'+v);
+  setTimeout(()=>addMsg('（原型回复）结论须带出处：正式版将给出处定位到段落/页码并标注验证状态；当前版本可先用「引用核验台」核验文中引用的真伪。'),350);
+  document.getElementById('chatInput').value='';
+};
+renderRes(); renderRoutes(); renderChart();
+</script>
+</body>
+</html>
